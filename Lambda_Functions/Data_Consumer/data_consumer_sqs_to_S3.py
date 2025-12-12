@@ -131,5 +131,5 @@ def lambda_handler(event, context):
             'body': json.dumps("Error processing orders.")
         }
     
-if __name__ == "__main__":
-    lambda_handler(None, None)
+# if __name__ == "__main__":
+#     lambda_handler(None, None)
