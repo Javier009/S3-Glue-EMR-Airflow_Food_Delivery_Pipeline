@@ -28,10 +28,6 @@ phases:
       - cd ..
       - echo "Package created successfully:" && ls -la data_consumer_package.zip
 
-      # --- STEP 3: Add your function code to the EXISTING zip ---
-      # - zip -g package.zip data_consumer_sqs_to_S3.py
-      # - unzip -l package.zip
-
   post_build:
     commands:
       - cd "$CODEBUILD_SRC_DIR/Lambda_Functions/Data_Consumer"
