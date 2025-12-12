@@ -5,25 +5,28 @@ from datetime import datetime
 
 QUEUE_URL = 'https://sqs.us-east-2.amazonaws.com/978177281350/food-delivery-raw-data-que'
 
-session = boto3.Session(
-    profile_name="AdministratorAccess-978177281350",
-    region_name="us-east-2"
-)
+# session = boto3.Session(
+#     profile_name="AdministratorAccess-978177281350",
+#     region_name="us-east-2"
+# )
 
-sqs = boto3.client('sqs',
-                   region_name='us-east-2',
-                    aws_access_key_id=session.get_credentials().access_key,
-                    aws_secret_access_key=session.get_credentials().secret_key,
-                    aws_session_token=session.get_credentials().token
-                   )
+# sqs = boto3.client('sqs',
+#                    region_name='us-east-2',
+#                     aws_access_key_id=session.get_credentials().access_key,
+#                     aws_secret_access_key=session.get_credentials().secret_key,
+#                     aws_session_token=session.get_credentials().token
+#                    )
 
-s3 = boto3.client(
-        's3',
-        region_name='us-east-2',
-        aws_access_key_id=session.get_credentials().access_key,
-        aws_secret_access_key=session.get_credentials().secret_key,
-        aws_session_token=session.get_credentials().token
-        )
+# s3 = boto3.client(
+#         's3',
+#         region_name='us-east-2',
+#         aws_access_key_id=session.get_credentials().access_key,
+#         aws_secret_access_key=session.get_credentials().secret_key,
+#         aws_session_token=session.get_credentials().token
+#         )
+
+sqs = boto3.client('sqs')
+s3 = boto3.client('s3')
     
 DESTINATION_BUCKET = 'food-delvery-raw-data-bucket'
 
