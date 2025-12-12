@@ -1,0 +1,49 @@
+version: 0.2
+
+phases:
+  install:
+    runtime-versions:
+      python: 3.12
+    commands:
+      - pip install --upgrade pip
+
+  build:
+    commands:
+      - set -eux
+      - echo "Repo root:" && pwd && ls -la
+      - cd "$CODEBUILD_SRC_DIR/Lambda_Functions/Data_Consumer"
+      - echo "In Lambda_Functions Folder/Data_Consumer:" && pwd && ls -la
+
+      # Check that code and requirements file exist
+      - test -f data_consumer_sqs_to_S3.py
+      
+      ### DATA COMSUMER PACKAGE CREATION ###
+      # --- STEP 1: Create a temp folder for dependencies ---
+      - mkdir -p data_consumer_package_files
+
+      # --- STEP 2: Install from requirements.txt into that folder ---
+      # - pip install -r requirements.txt --target ./package_files
+
+      # --- STEP 3: Zip the dependencies first ---
+      - cd data_consumer_package_files
+      - zip -r9 ../data_consumer_package.zip .
+      - cd ..
+
+      # --- STEP 4: Add your function code to the EXISTING zip ---
+      - zip -g package.zip data_consumer_sqs_to_S3.py
+      - unzip -l package.zip
+
+  post_build:
+    commands:
+    ### DIMMENSIONS TABLES LAMBDA FUNCTION UPDATE ###
+      - cd "$CODEBUILD_SRC_DIR/Lambda_Functions/Data_Consumer"
+      
+      - echo "Updating Data Consumer Lambda function code..."
+      - aws lambda update-function-code --function-name data_consumer_sqs_to_S3 --zip-file "fileb://data_consumer_package.zip"
+      - echo "Data Consumer Lambda function code updated successfully."
+
+      - echo "Waiting for update to complete..."
+      - aws lambda wait function-updated --function-name data_consumer_sqs_to_S3
+
+      - echo "Updating Lambda Handler..."
+      - aws lambda update-function-configuration --function-name data_consumer_sqs_to_S3 --handler data_consumer_sqs_to_S3.lambda_handler
