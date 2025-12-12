@@ -94,5 +94,3 @@ def lambda_handler(event, context):
             'statusCode': 500,
             'body': json.dumps("Error processing orders.")
         }
-    
-lambda_handler(None, None)
