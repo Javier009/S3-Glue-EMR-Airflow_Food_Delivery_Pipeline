@@ -61,7 +61,7 @@ def process_messages_from_sqs(queue_url):
             break
     return batch
 
-def send_records_to_sqs(batch:list):
+def send_records_to_s3(batch:list):
     
     if batch:
 
@@ -85,7 +85,7 @@ def send_records_to_sqs(batch:list):
 def lambda_handler(event, context):
     try:
         orders_batch = process_messages_from_sqs(QUEUE_URL)
-        send_records_to_sqs(orders_batch)
+        send_records_to_s3(orders_batch)
 
         return {
             'statusCode': 200,
