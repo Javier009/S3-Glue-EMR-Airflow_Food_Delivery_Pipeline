@@ -5,6 +5,8 @@ phases:
     runtime-versions:
       python: 3.12
     commands:
+      - apt-get update -y
+      - apt-get install -y zip
       - pip install --upgrade pip
 
   build:
@@ -12,32 +14,28 @@ phases:
       - set -eux
       - echo "Repo root:" && pwd && ls -la
       - cd "$CODEBUILD_SRC_DIR/Lambda_Functions/Data_Consumer"
-      - echo "In Lambda_Functions Folder/Data_Consumer:" && pwd && ls -la
+      - echo "In Lambda_Functions Lambda_Functions/Data_Consumer:" && pwd && ls -la
 
-      # Check that code and requirements file exist
+      # Check that code file exist
       - test -f data_consumer_sqs_to_S3.py
-      
-      ### DATA COMSUMER PACKAGE CREATION ###
-      # --- STEP 1: Create a temp folder for dependencies ---
+      # --- STEP 1: Create a temp folder for dependencies and copy funtion code---
       - mkdir -p data_consumer_package_files
+      - cp data_consumer_sqs_to_S3.py data_consumer_package_files/
 
-      # --- STEP 2: Install from requirements.txt into that folder ---
-      # - pip install -r requirements.txt --target ./package_files
-
-      # --- STEP 3: Zip the dependencies first ---
+      # --- STEP 2: Zip the dependencies first ---
       - cd data_consumer_package_files
       - zip -r9 ../data_consumer_package.zip .
       - cd ..
+      - echo "Package created successfully:" && ls -la data_consumer_package.zip
 
-      # --- STEP 4: Add your function code to the EXISTING zip ---
-      - zip -g package.zip data_consumer_sqs_to_S3.py
-      - unzip -l package.zip
+      # --- STEP 3: Add your function code to the EXISTING zip ---
+      # - zip -g package.zip data_consumer_sqs_to_S3.py
+      # - unzip -l package.zip
 
   post_build:
     commands:
-    ### DIMMENSIONS TABLES LAMBDA FUNCTION UPDATE ###
       - cd "$CODEBUILD_SRC_DIR/Lambda_Functions/Data_Consumer"
-      
+
       - echo "Updating Data Consumer Lambda function code..."
       - aws lambda update-function-code --function-name data_consumer_sqs_to_S3 --zip-file "fileb://data_consumer_package.zip"
       - echo "Data Consumer Lambda function code updated successfully."
