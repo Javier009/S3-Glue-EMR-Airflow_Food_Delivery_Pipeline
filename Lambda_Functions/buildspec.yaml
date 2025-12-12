@@ -5,8 +5,8 @@ phases:
     runtime-versions:
       python: 3.12
     commands:
-      - apt-get update -y
-      - apt-get install -y zip
+      - yum update -y
+      - yum install -y zip
       - pip install --upgrade pip
 
   build:
