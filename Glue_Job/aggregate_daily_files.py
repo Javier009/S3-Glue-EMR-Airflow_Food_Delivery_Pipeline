@@ -6,7 +6,7 @@ from awsglue.context import GlueContext
 from awsglue.job import Job
 
 # --- 1. Parameter Handling ---
-args = getResolvedOptions(sys.argv, ['JOB_NAME', 'date_to_process'])
+args = getResolvedOptions(sys.argv, ['JOB_NAME']) # Optional 'date_to_process'
 
 # Set up contexts
 sc = SparkContext()
