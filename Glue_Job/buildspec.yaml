@@ -1,11 +1,12 @@
 version: 0.2
+
 env:
   variables:
     GLUE_SCRIPT_BUCKET: "glue-job-code-base"
     GLUE_SCRIPT_KEY: "scripts/aggregate_daily_files.py"
     GLUE_JOB_NAME: "food-delivery-data-daily-agg-files"
     GLUE_EXECUTION_ROLE_ARN: "arn:aws:iam::978177281350:role/agg-daily-files-glue-job-role"
-    AWS_DEFAULT_REGION: "us-east-2"   # Ohio
+    AWS_DEFAULT_REGION: "us-east-2"
 
 phases:
   install:
@@ -21,18 +22,18 @@ phases:
   post_build:
     commands:
       - echo "Updating Glue Job definition: ${GLUE_JOB_NAME}"
-      - >
-        aws glue update-job
-        --job-name "${GLUE_JOB_NAME}"
-        --job-update "{
-          \"ExecutionProperty\": {\"MaxConcurrentRuns\": 1},
-          \"Command\": {
-            \"Name\": \"glueetl\",
-            \"ScriptLocation\": \"s3://${GLUE_SCRIPT_BUCKET}/${GLUE_SCRIPT_KEY}\",
-            \"PythonVersion\": \"3\"
-          },
-          \"Role\": \"${GLUE_EXECUTION_ROLE_ARN}\",
-          \"GlueVersion\": \"4.0\",
-          \"WorkerType\": \"G.1X\",
-          \"NumberOfWorkers\": 10
-        }"
+      - |
+          aws glue update-job \
+            --job-name "${GLUE_JOB_NAME}" \
+            --job-update "{
+              \"ExecutionProperty\": {\"MaxConcurrentRuns\": 1},
+              \"Command\": {
+                \"Name\": \"glueetl\",
+                \"ScriptLocation\": \"s3://${GLUE_SCRIPT_BUCKET}/${GLUE_SCRIPT_KEY}\",
+                \"PythonVersion\": \"3\"
+              },
+              \"Role\": \"${GLUE_EXECUTION_ROLE_ARN}\",
+              \"GlueVersion\": \"4.0\",
+              \"WorkerType\": \"G.1X\",
+              \"NumberOfWorkers\": 10
+            }"
