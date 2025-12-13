@@ -45,7 +45,13 @@ print(f"Writing to: {OUTPUT_PATH}")
 # Read the many small JSON files for the specified date
 # Assuming your raw data is JSON, adjust format if needed (e.g., 'csv', 'json')
 try:
-    raw_df = spark.read.json(INPUT_PATH)
+    raw_df = (spark.read \
+              .option("multiLine", "true") \
+              .option("mode", "PERMISSIVE") \
+              .option("columnNameOfCorruptRecord", "_corrupt_record") \
+              .json(INPUT_PATH) \
+              .cache()
+              )
 
     if raw_df.rdd.isEmpty():
         print(f"WARNING: No raw data files found for date {date_str}. Committing job and exiting.")
