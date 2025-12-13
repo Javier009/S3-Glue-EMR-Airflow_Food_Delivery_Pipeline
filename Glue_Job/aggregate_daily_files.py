@@ -44,18 +44,22 @@ print(f"Writing to: {OUTPUT_PATH}")
 
 # Read the many small JSON files for the specified date
 # Assuming your raw data is JSON, adjust format if needed (e.g., 'csv', 'json')
-raw_df = spark.read.json(INPUT_PATH)
+try:
+    raw_df = spark.read.json(INPUT_PATH)
 
-if raw_df.rdd.isEmpty():
-    print(f"WARNING: No raw data files found for date {date_str}. Committing job and exiting.")
+    if raw_df.rdd.isEmpty():
+        print(f"WARNING: No raw data files found for date {date_str}. Committing job and exiting.")
+        job.commit()
+        sys.exit(0)
+
+    print(f"SUCCESS: Read {raw_df.count()} rows of data.")
+    # Repartition to 1 file (This is the COMPACTION step)
+    comp_df = raw_df.repartition(1) # Numebr of output parquet files, set to 1 for full compaction
+
+    # Write the aggregated data to S3 in Parquet format, partitioned by the date components
+    comp_df.write.mode("overwrite").parquet(OUTPUT_PATH)
+
     job.commit()
-    sys.exit(0)
-
-print(f"SUCCESS: Read {raw_df.count()} rows of data.")
-# Repartition to 1 file (This is the COMPACTION step)
-comp_df = raw_df.repartition(1) # Numebr of output parquet files, set to 1 for full compaction
-
-# Write the aggregated data to S3 in Parquet format, partitioned by the date components
-comp_df.write.mode("overwrite").parquet(OUTPUT_PATH)
-
-job.commit()
+except Exception as e:
+    print(f"ERROR: Job failed due to: {str(e)}")
+    sys.exit(1)
