@@ -1,60 +1,38 @@
 version: 0.2
-
-# ----------------------------------------------------------------------
-# Define Environment Variables
-# These variables should be set in the CodeBuild Project settings (recommended)
-# or you can replace the variable references below with hardcoded values.
-# ----------------------------------------------------------------------
 env:
   variables:
-    # ⚠️ 1. The S3 bucket where your Glue job will read the script from
-    GLUE_SCRIPT_BUCKET: "glue-job-code-base" 
-    # ⚠️ 2. The S3 path inside the bucket (e.g., 'scripts/my_etl_job.py')
-    GLUE_SCRIPT_KEY: "scripts/aggregate_daily_files.py" 
-    # ⚠️ 3. The exact name of the Glue Job you manually created
-    GLUE_JOB_NAME: "food-delivery-data-daily-agg-files" 
-    # ⚠️ 4. The ARN of the IAM Role the Glue Job executes with
-    GLUE_EXECUTION_ROLE_ARN: "arn:aws:iam::978177281350:role/agg-daily-files-glue-job-role" 
-    
+    GLUE_SCRIPT_BUCKET: "glue-job-code-base"
+    GLUE_SCRIPT_KEY: "scripts/aggregate_daily_files.py"
+    GLUE_JOB_NAME: "food-delivery-data-daily-agg-files"
+    GLUE_EXECUTION_ROLE_ARN: "arn:aws:iam::978177281350:role/agg-daily-files-glue-job-role"
+    AWS_DEFAULT_REGION: "us-east-2"   # Ohio
+
 phases:
   install:
     commands:
-      # Ensure AWS CLI is up-to-date in the build environment
-      - echo "Installing latest AWS CLI for deployment..."
-      - pip install --upgrade awscli
+      - set -euo pipefail
+      - aws --version
 
   build:
     commands:
-      # --- Phase 1: Upload the PySpark script to S3 ---
-      - GLUE_S3_PATH="s3://${GLUE_SCRIPT_BUCKET}/${GLUE_SCRIPT_KEY}"
-      - echo "Uploading script: glue_job_script/my_compaction_job.py to ${GLUE_S3_PATH}"
-      - aws s3 cp Glue_Job/aggregate_daily_files.py ${GLUE_S3_PATH}
-      - echo "Script upload complete."
+      - echo "Uploading script to s3://${GLUE_SCRIPT_BUCKET}/${GLUE_SCRIPT_KEY}"
+      - aws s3 cp Glue_Job/aggregate_daily_files.py "s3://${GLUE_SCRIPT_BUCKET}/${GLUE_SCRIPT_KEY}"
 
   post_build:
     commands:
-      # --- Phase 2: Update the Glue Job Definition ---
-      # This command tells the existing Glue Job to use the newly uploaded script.
-      # The value for --job-update must be a single, escaped JSON string.
       - echo "Updating Glue Job definition: ${GLUE_JOB_NAME}"
-      
-      # Use the 'jq' command (if available in your image) or Python to construct
-      # the complex JSON string for --job-update argument. 
-      # Here is the direct AWS CLI approach:
-      
       - >
-        aws glue update-job 
-        --job-name "${GLUE_JOB_NAME}" 
-        --job-update '{
-          "ExecutionProperty": {"MaxConcurrentRuns": 1},
-          "Command": {
-            "Name": "glueetl",
-            "ScriptLocation": "s3://'${GLUE_SCRIPT_BUCKET}'/'${GLUE_SCRIPT_KEY}'",
-            "PythonVersion": "3"
+        aws glue update-job
+        --job-name "${GLUE_JOB_NAME}"
+        --job-update "{
+          \"ExecutionProperty\": {\"MaxConcurrentRuns\": 1},
+          \"Command\": {
+            \"Name\": \"glueetl\",
+            \"ScriptLocation\": \"s3://${GLUE_SCRIPT_BUCKET}/${GLUE_SCRIPT_KEY}\",
+            \"PythonVersion\": \"3\"
           },
-          "Role": "'${GLUE_EXECUTION_ROLE_ARN}'",
-          "GlueVersion": "4.0",
-          "MaxCapacity": 5  
-        }'
-      - echo "Glue Job update successful. Job is now pointing to the latest script version."
-
+          \"Role\": \"${GLUE_EXECUTION_ROLE_ARN}\",
+          \"GlueVersion\": \"4.0\",
+          \"WorkerType\": \"G.1X\",
+          \"NumberOfWorkers\": 10
+        }"
