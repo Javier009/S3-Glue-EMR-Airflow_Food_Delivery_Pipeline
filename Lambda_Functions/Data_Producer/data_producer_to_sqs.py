@@ -134,7 +134,7 @@ def send_records_to_sqs(queue_url:str, records:list):
 
 if __name__ == "__main__":
     
-    number_of_records = 300
+    number_of_records = 5000
     # number_of_records = random.randint(50000, 60000)
     records = generate_order_records(number_of_records)
     print(len(records), "records generated.")
