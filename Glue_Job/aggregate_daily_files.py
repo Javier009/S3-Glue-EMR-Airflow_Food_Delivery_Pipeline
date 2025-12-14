@@ -35,7 +35,7 @@ INPUT_BUCKET = 'food-delvery-raw-data-bucket'
 INPUT_PATH = f"s3://{INPUT_BUCKET}/year={YEAR}/month={MONTH}/day={DAY}/*.json"
 
 OUTPUT_BUCKET = 'food-delvery-raw-data-dailyagg-bucket'
-OUTPUT_PATH = f"s3://{OUTPUT_BUCKET}/year={YEAR}/month={MONTH}/food_delivery_data_{date_str}.parquet"
+OUTPUT_PATH = f"s3://{OUTPUT_BUCKET}/year={YEAR}/month={MONTH}/day={DAY}"
 
 print(f"Reading from: {INPUT_PATH}")
 print(f"Writing to: {OUTPUT_PATH}")
@@ -43,7 +43,6 @@ print(f"Writing to: {OUTPUT_PATH}")
 # --- 3. ETL and Compaction Logic ---
 
 # Read the many small JSON files for the specified date
-# Assuming your raw data is JSON, adjust format if needed (e.g., 'csv', 'json')
 try:
     raw_df = (spark.read \
               .option("multiLine", "true") \
