@@ -134,16 +134,16 @@ def send_records_to_sqs(queue_url:str, records:list):
 
 if __name__ == "__main__":
     
-    number_of_records = 5000
+    number_of_records = 3342
     # number_of_records = random.randint(50000, 60000)
     records = generate_order_records(number_of_records)
     print(len(records), "records generated.")
     response = send_records_to_sqs(QUE_URL, records)
     # Send notification to SNS topic
-    sns.publish(
-        TopicArn=NOTIFICATION_TOPIC,
-        Message=f"{number_of_records-1} new order records have been sent to SQS.",
-        Subject="New Order Records Notification"
-    )
-    print("Notification sent to SNS topic.")
+    # sns.publish(
+    #     TopicArn=NOTIFICATION_TOPIC,
+    #     Message=f"{number_of_records-1} new order records have been sent to SQS.",
+    #     Subject="New Order Records Notification"
+    # )
+    # print("Notification sent to SNS topic.")
     print(f"Sent {number_of_records-1} records to SQS with MessageId: {response['MessageId']}")
