@@ -1,6 +1,6 @@
 import boto3
 
-# Create the session once (already done)
+# Initialize boto3 clients with session credentials if available
 try:
     session = boto3.Session(profile_name="AdministratorAccess-978177281350", region_name="us-east-2")
     sqs_client = session.client('sqs')
@@ -39,7 +39,7 @@ def invoke_lambda_function(number_of_invokations):
         )
         print(f"Invoked {TARGET_LAMBDA_FUNCTION_NAME}, Response Status Code: {response['StatusCode']}")
 
-def orchestrator():
+def orchestrator(event=None, context=None):
     try:
         messages_in_queue = get_queue_number_of_messages(QUE_URL)
         if messages_in_queue == 0:

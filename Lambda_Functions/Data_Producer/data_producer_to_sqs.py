@@ -4,29 +4,19 @@ import random
 from datetime import datetime, timedelta
 import uuid
 
-#S3 Config
+# Initialize boto3 clients with session credentials if available
+try:
+    session = boto3.Session(profile_name="AdministratorAccess-978177281350", region_name="us-east-2")
+    sqs_client = session.client('sqs')
+    lambda_client = session.client('lambda')
+except:
+    sqs_client = boto3.client('sqs')
+    lambda_client = boto3.client('lambda')
 
-session = boto3.Session(
-    profile_name="AdministratorAccess-978177281350",
-    region_name="us-east-2"
-)
-
-sqs = boto3.client('sqs',
-                   region_name='us-east-2',
-                    aws_access_key_id=session.get_credentials().access_key,
-                    aws_secret_access_key=session.get_credentials().secret_key,
-                    aws_session_token=session.get_credentials().token
-                   )
-
-sns = boto3.client('sns',
-                   region_name='us-east-2',
-                    aws_access_key_id=session.get_credentials().access_key,
-                    aws_secret_access_key=session.get_credentials().secret_key,
-                    aws_session_token=session.get_credentials().token
-                   )
 
 QUE_URL = 'https://sqs.us-east-2.amazonaws.com/978177281350/food-delivery-raw-data-que'
 NOTIFICATION_TOPIC = 'arn:aws:sns:us-east-2:978177281350:orders_raw_data_recieved'
+BRIDGE_LAMBDA_FUNCTION_NAME = 'data_bridge_producer_consumer'
 
 def generate_order_records(n_records):
 
@@ -125,7 +115,7 @@ def generate_order_records(n_records):
 
 def send_records_to_sqs(queue_url:str, records:list):
     for record in records:
-        response = sqs.send_message(
+        response = sqs_client.send_message(
             QueueUrl=queue_url,
             MessageBody=json.dumps(record)
         )
@@ -134,11 +124,19 @@ def send_records_to_sqs(queue_url:str, records:list):
 
 if __name__ == "__main__":
     
-    number_of_records = 3342
+    number_of_records = random.randint(1000, 2000)
     # number_of_records = random.randint(50000, 60000)
     records = generate_order_records(number_of_records)
     print(len(records), "records generated.")
     response = send_records_to_sqs(QUE_URL, records)
+    print(f"Sent {number_of_records-1} records to SQS with MessageId: {response['MessageId']}")
+    # Invoke Bridge Lambda Function to start processing
+    lambda_response = lambda_client.invoke(
+        FunctionName=BRIDGE_LAMBDA_FUNCTION_NAME,
+        InvocationType='Event'  # Asynchronous invocation
+    )
+    print(f"Invoked {BRIDGE_LAMBDA_FUNCTION_NAME}, Response Status Code: {lambda_response['StatusCode']}")
+
     # Send notification to SNS topic
     # sns.publish(
     #     TopicArn=NOTIFICATION_TOPIC,
@@ -146,4 +144,3 @@ if __name__ == "__main__":
     #     Subject="New Order Records Notification"
     # )
     # print("Notification sent to SNS topic.")
-    print(f"Sent {number_of_records-1} records to SQS with MessageId: {response['MessageId']}")
