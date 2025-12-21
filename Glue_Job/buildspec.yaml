@@ -15,10 +15,16 @@ phases:
       - 'aws --version'
   build:
     commands:
+      # Zip and upload Glue script to S3
       - 'echo Uploading script to s3://${GLUE_SCRIPT_BUCKET}/${GLUE_SCRIPT_KEY}'
       - 'aws s3 cp Glue_Job/aggregate_daily_files.py "s3://${GLUE_SCRIPT_BUCKET}/${GLUE_SCRIPT_KEY}"'
+      # Zip utilities.py and upload to S3
+      - 'cd Glue_Job'
+      - 'zip ../utils.zip utilities.py'
+      - 'aws s3 cp ../utils.zip "s3://${GLUE_SCRIPT_BUCKET}/${GLUE_SCRIPT_KEY%/*}/utils.zip"'
+      - 'cd ..'
   post_build:
     commands:
       - 'echo Updating Glue Job definition ${GLUE_JOB_NAME}'
-      - 'aws glue update-job --region ${AWS_DEFAULT_REGION} --job-name "${GLUE_JOB_NAME}" --job-update "{\"ExecutionProperty\":{\"MaxConcurrentRuns\":1},\"Command\":{\"Name\":\"glueetl\",\"ScriptLocation\":\"s3://${GLUE_SCRIPT_BUCKET}/${GLUE_SCRIPT_KEY}\",\"PythonVersion\":\"3\"},\"Role\":\"${GLUE_EXECUTION_ROLE_ARN}\",\"GlueVersion\":\"4.0\",\"WorkerType\":\"G.1X\",\"NumberOfWorkers\":10}"'
+      - aws glue update-job --region ${AWS_DEFAULT_REGION} --job-name "${GLUE_JOB_NAME}" --job-update "{\"Role\":\"${GLUE_EXECUTION_ROLE_ARN}\",\"GlueVersion\":\"4.0\",\"WorkerType\":\"G.1X\",\"NumberOfWorkers\":10,\"Command\":{\"Name\":\"glueetl\",\"ScriptLocation\":\"s3://${GLUE_SCRIPT_BUCKET}/${GLUE_SCRIPT_KEY}\",\"PythonVersion\":\"3\"},\"DefaultArguments\":{\"--extra-py-files\":\"s3://${GLUE_SCRIPT_BUCKET}/scripts/utils.zip\"},\"ExecutionProperty\":{\"MaxConcurrentRuns\":1}}"
 
