@@ -12,11 +12,10 @@ phases:
   build:
     commands:
       - set -euo pipefail
-      # Define a reusable function for zipping and updating
-      # Parameters: $1=DirName, $2=FileName, $3=LambdaName, $4=HandlerName
+      # Use the pipe '|' to group the function and the calls into one shell session
       - |
         update_lambda() {
-          DIR=$1; FILE=$2; LAMBDA=$3; HANDLER=$4
+          local DIR=$1 FILE=$2 LAMBDA=$3 HANDLER=$4
           echo "Processing $LAMBDA..."
           
           cd "$CODEBUILD_SRC_DIR/Lambda_Functions/$DIR"
@@ -37,14 +36,10 @@ phases:
           cd "$CODEBUILD_SRC_DIR"
         }
 
-      # --- EXECUTION LOOP ---
-      # Format: update_lambda "Folder" "PythonFile.py" "LambdaName" "filename.method"
-      
-      - update_lambda "Data_Consumer" "data_consumer_sqs_to_S3.py" "data_consumer_sqs_to_S3" "data_consumer_sqs_to_S3.lambda_handler"
-      
-      - update_lambda "Bridge_Producer_Consumer" "producer_consumer_distribution.py" "data_bridge_producer_consumer" "producer_consumer_distribution.orchestrator"
-      
-      - update_lambda "Data_Producer" "data_producer_to_sqs.py" "data_producer_to_sqs" "data_producer_to_sqs.data_producer_handler"
+        # --- EXECUTION CALLS (Inside the same pipe block) ---
+        update_lambda "Data_Consumer" "data_consumer_sqs_to_S3.py" "data_consumer_sqs_to_S3" "data_consumer_sqs_to_S3.lambda_handler"
+        update_lambda "Bridge_Producer_Consumer" "producer_consumer_distribution.py" "data_bridge_producer_consumer" "producer_consumer_distribution.orchestrator"
+        update_lambda "Data_Producer" "data_producer_to_sqs.py" "data_producer_to_sqs" "data_producer_to_sqs.data_producer_handler"
 
   post_build:
     commands:
