@@ -124,7 +124,7 @@ def send_records_to_sqs(queue_url:str, records:list):
 
 def data_producer_handler(event=None, context=None):
     try:
-        number_of_records = random.randint(10000, 20000)
+        number_of_records = random.randint(2000, 5000)
         records = generate_order_records(number_of_records)
         print(len(records), "records generated.")
         response = send_records_to_sqs(QUE_URL, records)
