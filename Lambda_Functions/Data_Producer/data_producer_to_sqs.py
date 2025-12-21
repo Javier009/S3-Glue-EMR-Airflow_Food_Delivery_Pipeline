@@ -122,24 +122,33 @@ def send_records_to_sqs(queue_url:str, records:list):
     return response
 
 
-if __name__ == "__main__":
-    
-    number_of_records = random.randint(1000, 2000)
-    records = generate_order_records(number_of_records)
-    print(len(records), "records generated.")
-    response = send_records_to_sqs(QUE_URL, records)
-    print(f"Sent {number_of_records-1} records to SQS with MessageId: {response['MessageId']}")
-    # Invoke Bridge Lambda Function to start processing
-    lambda_response = lambda_client.invoke(
-        FunctionName=BRIDGE_LAMBDA_FUNCTION_NAME,
-        InvocationType='Event'  # Asynchronous invocation
-    )
-    print(f"Invoked {BRIDGE_LAMBDA_FUNCTION_NAME}, Response Status Code: {lambda_response['StatusCode']}")
+def data_producer_handler(event=None, context=None):
+    try:
+        number_of_records = random.randint(1000, 2000)
+        records = generate_order_records(number_of_records)
+        print(len(records), "records generated.")
+        response = send_records_to_sqs(QUE_URL, records)
+        print(f"Sent {number_of_records-1} records to SQS with MessageId: {response['MessageId']}")
+        # Invoke Bridge Lambda Function to start processing
+        lambda_response = lambda_client.invoke(
+            FunctionName=BRIDGE_LAMBDA_FUNCTION_NAME,
+            InvocationType='Event'  # Asynchronous invocation
+        )
+        print(f"Invoked {BRIDGE_LAMBDA_FUNCTION_NAME}, Response Status Code: {lambda_response['StatusCode']}")
+    except Exception as e:
+        print(f"Error in data_producer_handler: {str(e)}")
 
-    # Send notification to SNS topic
-    # sns.publish(
-    #     TopicArn=NOTIFICATION_TOPIC,
-    #     Message=f"{number_of_records-1} new order records have been sent to SQS.",
-    #     Subject="New Order Records Notification"
-    # )
-    # print("Notification sent to SNS topic.")
+
+# if __name__ == "__main__":
+    
+#     number_of_records = random.randint(1000, 2000)
+#     records = generate_order_records(number_of_records)
+#     print(len(records), "records generated.")
+#     response = send_records_to_sqs(QUE_URL, records)
+#     print(f"Sent {number_of_records-1} records to SQS with MessageId: {response['MessageId']}")
+#     # Invoke Bridge Lambda Function to start processing
+#     lambda_response = lambda_client.invoke(
+#         FunctionName=BRIDGE_LAMBDA_FUNCTION_NAME,
+#         InvocationType='Event'  # Asynchronous invocation
+#     )
+#     print(f"Invoked {BRIDGE_LAMBDA_FUNCTION_NAME}, Response Status Code: {lambda_response['StatusCode']}")

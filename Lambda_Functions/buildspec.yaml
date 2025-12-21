@@ -11,61 +11,139 @@ phases:
 
   build:
     commands:
-      - set -eux
-      - echo "Repo root:" && pwd && ls -la
-      # DATA CONSUMER LAMBDA FUNCTION PACKAGE CREATION/UPDATE
-      - cd "$CODEBUILD_SRC_DIR/Lambda_Functions/Data_Consumer"
-      - echo "In Lambda_Functions Lambda_Functions/Data_Consumer:" && pwd && ls -la
+      - set -euo pipefail
+      # Define a reusable function for zipping and updating
+      # Parameters: $1=DirName, $2=FileName, $3=LambdaName, $4=HandlerName
+      - |
+        update_lambda() {
+          DIR=$1; FILE=$2; LAMBDA=$3; HANDLER=$4
+          echo "Processing $LAMBDA..."
+          
+          cd "$CODEBUILD_SRC_DIR/Lambda_Functions/$DIR"
+          
+          # Zip the specific file
+          zip "${LAMBDA}_pkg.zip" "$FILE"
+          
+          # Update Code
+          aws lambda update-function-code --function-name "$LAMBDA" --zip-file "fileb://${LAMBDA}_pkg.zip"
+          
+          # Wait for update to settle
+          aws lambda wait function-updated --function-name "$LAMBDA"
+          
+          # Update Config (Handler)
+          aws lambda update-function-configuration --function-name "$LAMBDA" --handler "$HANDLER"
+          
+          echo "Successfully updated $LAMBDA"
+          cd "$CODEBUILD_SRC_DIR"
+        }
 
-      # Check that code file exist
-      - test -f data_consumer_sqs_to_S3.py
-      # --- STEP 1: Create a temp folder for dependencies and copy funtion code---
-      - mkdir -p data_consumer_package_files
-      - cp data_consumer_sqs_to_S3.py data_consumer_package_files/
-
-      # --- STEP 2: Zip the dependencies first ---
-      - cd data_consumer_package_files
-      - zip -r9 ../data_consumer_package.zip .
-      - cd ..
-      - echo "Package data_consumer_sqs_to_S3 created/updated successfully:" && ls -la data_consumer_package.zip
-
-    # BRIDGE PRODUCER CONSUMER LAMBDA FUNCTION CREATION/UPDATE
-      - cd "$CODEBUILD_SRC_DIR/Lambda_Functions/Bridge_Producer_Consumer"
-      - echo "In Lambda_Functions/Bridge_Producer_Consumer:" && pwd && ls
-
-      # Check that code file exist
-      - test -f producer_consumer_distribution.py
-      # --- STEP 1: Create a temp folder for dependencies and copy funtion code---
-      - mkdir -p bridge_producer_consumer_package_files
-      - cp producer_consumer_distribution.py bridge_producer_consumer_package_files/
-      # --- STEP 2: Zip the dependencies first ---
-      - cd bridge_producer_consumer_package_files
-      - zip -r9 ../bridge_producer_consumer_package_files.zip .
-      - cd ..
-      - echo "Package bridge_producer_consumer_package_files/updated created successfully:" && ls -la bridge_producer_consumer_package_files.zip
+      # --- EXECUTION LOOP ---
+      # Format: update_lambda "Folder" "PythonFile.py" "LambdaName" "filename.method"
+      
+      - update_lambda "Data_Consumer" "data_consumer_sqs_to_S3.py" "data_consumer_sqs_to_S3" "data_consumer_sqs_to_S3.lambda_handler"
+      
+      - update_lambda "Bridge_Producer_Consumer" "producer_consumer_distribution.py" "data_bridge_producer_consumer" "producer_consumer_distribution.orchestrator"
+      
+      - update_lambda "Data_Producer" "data_producer_to_sqs.py" "data_producer_to_sqs" "data_producer_to_sqs.data_producer_handler"
 
   post_build:
     commands:
-    # UPDATE DATA CONSUMER LAMBDA FUNCTION CODE AND CONFIGURATION
-      - cd "$CODEBUILD_SRC_DIR/Lambda_Functions/Data_Consumer"
+      - echo "All Lambda functions have been deployed and configured."
 
-      - echo "Updating Data Consumer Lambda function code..."
-      - aws lambda update-function-code --function-name data_consumer_sqs_to_S3 --zip-file "fileb://data_consumer_package.zip"
-      - echo "Data Consumer Lambda function code updated successfully."
+# version: 0.2
 
-      - echo "Waiting for update to complete..."
-      - aws lambda wait function-updated --function-name data_consumer_sqs_to_S3
+# phases:
+#   install:
+#     runtime-versions:
+#       python: 3.12
+#     commands:
+#       - yum update -y
+#       - yum install -y zip
+#       - pip install --upgrade pip
 
-      - echo "Updating Lambda Handler..."
-      - aws lambda update-function-configuration --function-name data_consumer_sqs_to_S3 --handler data_consumer_sqs_to_S3.lambda_handler
+#   build:
+#     commands:
+#       - set -eux
+#       - echo "Repo root:" && pwd && ls -la
+#       # DATA CONSUMER LAMBDA FUNCTION PACKAGE CREATION/UPDATE
+#       - cd "$CODEBUILD_SRC_DIR/Lambda_Functions/Data_Consumer"
+#       - echo "In Lambda_Functions Lambda_Functions/Data_Consumer:" && pwd && ls -la
 
-    # UPDATE BRIDGE PRODUCER CONSUMER LAMBDA FUNCTION CODE AND CONFIGURATION
-      - cd "$CODEBUILD_SRC_DIR/Lambda_Functions/Bridge_Producer_Consumer"
+#       # Check that code file exist
+#       - test -f data_consumer_sqs_to_S3.py
+#       # --- STEP 1: Create a temp folder for dependencies and copy funtion code---
+#       - mkdir -p data_consumer_package_files
+#       - cp data_consumer_sqs_to_S3.py data_consumer_package_files/
 
-      - echo "Updating Bridge Producer Consumer Lambda function code..."
-      - aws lambda update-function-code --function-name data_bridge_producer_consumer --zip-file "fileb://bridge_producer_consumer_package_files.zip"
-      - echo "Bridge Producer Consumer Lambda function code updated successfully."
-      - echo "Waiting for update to complete..."
-      - aws lambda wait function-updated --function-name data_bridge_producer_consumer
-      - echo "Updating Lambda Handler..."
-      - aws lambda update-function-configuration --function-name data_bridge_producer_consumer --handler producer_consumer_distribution.orchestrator
+#       # --- STEP 2: Zip the dependencies first ---
+#       - cd data_consumer_package_files
+#       - zip -r9 ../data_consumer_package.zip .
+#       - cd ..
+#       - echo "Package data_consumer_sqs_to_S3 created/updated successfully:" && ls -la data_consumer_package.zip
+
+#     # BRIDGE PRODUCER CONSUMER LAMBDA FUNCTION CREATION/UPDATE
+#       - cd "$CODEBUILD_SRC_DIR/Lambda_Functions/Bridge_Producer_Consumer"
+#       - echo "In Lambda_Functions/Bridge_Producer_Consumer:" && pwd && ls
+
+#       # Check that code file exist
+#       - test -f producer_consumer_distribution.py
+#       # --- STEP 1: Create a temp folder for dependencies and copy funtion code---
+#       - mkdir -p bridge_producer_consumer_package_files
+#       - cp producer_consumer_distribution.py bridge_producer_consumer_package_files/
+#       # --- STEP 2: Zip the dependencies first ---
+#       - cd bridge_producer_consumer_package_files
+#       - zip -r9 ../bridge_producer_consumer_package_files.zip .
+#       - cd ..
+#       - echo "Package bridge_producer_consumer_package_files/updated created successfully:" && ls -la bridge_producer_consumer_package_files.zip
+
+#     # DATA PRODUCER LAMBDA FUNCTION CREATION/UPDATE
+#       - cd "$CODEBUILD_SRC_DIR/Lambda_Functions/Data_Producer"
+#       - echo "In Lambda_Functions/Data_Producer:" && pwd && ls
+
+#       # Check that code file exist
+#       - test -f data_producer_to_sqs.py
+#       # --- STEP 1: Create a temp folder for dependencies and copy funtion code---
+#       - mkdir -p data_producer_package_files
+#       - cp data_producer_to_sqs.py data_producer_package_files/
+#       # --- STEP 2: Zip the dependencies first ---
+#       - cd data_producer_package_files
+#       - zip -r9 ../data_producer_package_files.zip .
+#       - cd ..
+#       - echo "Package data_producer_package_files created/updated successfully:" && ls -la data_producer_package_files.zip
+
+
+#   post_build:
+#     commands:
+#     # UPDATE DATA CONSUMER LAMBDA FUNCTION CODE AND CONFIGURATION
+#       - cd "$CODEBUILD_SRC_DIR/Lambda_Functions/Data_Consumer"
+
+#       - echo "Updating Data Consumer Lambda function code..."
+#       - aws lambda update-function-code --function-name data_consumer_sqs_to_S3 --zip-file "fileb://data_consumer_package.zip"
+#       - echo "Data Consumer Lambda function code updated successfully."
+
+#       - echo "Waiting for update to complete..."
+#       - aws lambda wait function-updated --function-name data_consumer_sqs_to_S3
+
+#       - echo "Updating Lambda Handler..."
+#       - aws lambda update-function-configuration --function-name data_consumer_sqs_to_S3 --handler data_consumer_sqs_to_S3.lambda_handler
+
+#     # UPDATE BRIDGE PRODUCER CONSUMER LAMBDA FUNCTION CODE AND CONFIGURATION
+#       - cd "$CODEBUILD_SRC_DIR/Lambda_Functions/Bridge_Producer_Consumer"
+
+#       - echo "Updating Bridge Producer Consumer Lambda function code..."
+#       - aws lambda update-function-code --function-name data_bridge_producer_consumer --zip-file "fileb://bridge_producer_consumer_package_files.zip"
+#       - echo "Bridge Producer Consumer Lambda function code updated successfully."
+#       - echo "Waiting for update to complete..."
+#       - aws lambda wait function-updated --function-name data_bridge_producer_consumer
+#       - echo "Updating Lambda Handler..."
+#       - aws lambda update-function-configuration --function-name data_bridge_producer_consumer --handler producer_consumer_distribution.orchestrator
+
+#     # UPDATE DATA PRODUCER LAMBDA FUNCTION CODE AND CONFIGURATION
+#       - cd "$CODEBUILD_SRC_DIR/Lambda_Functions/Data_Producer"
+#       - echo "Updating Data Producer Lambda function code..."
+#       - aws lambda update-function-code --function-name data_producer_to_sqs --zip-file "fileb://data_producer_package_files.zip"
+#       - echo "Data Producer Lambda function code updated successfully."
+#       - echo "Waiting for update to complete..."
+#       - aws lambda wait function-updated --function-name data_producer_to_sqs
+#       - echo "Updating Lambda Handler..."
+#       - aws lambda update-function-configuration --function-name data_producer_to_sqs --handler data_producer_to_sqs.data_producer_handler
