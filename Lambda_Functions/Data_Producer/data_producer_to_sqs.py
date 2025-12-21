@@ -124,7 +124,7 @@ def send_records_to_sqs(queue_url:str, records:list):
 
 def data_producer_handler(event=None, context=None):
     try:
-        number_of_records = random.randint(1000, 2000)
+        number_of_records = random.randint(10000, 20000)
         records = generate_order_records(number_of_records)
         print(len(records), "records generated.")
         response = send_records_to_sqs(QUE_URL, records)
@@ -135,8 +135,16 @@ def data_producer_handler(event=None, context=None):
             InvocationType='Event'  # Asynchronous invocation
         )
         print(f"Invoked {BRIDGE_LAMBDA_FUNCTION_NAME}, Response Status Code: {lambda_response['StatusCode']}")
+        return {
+            'statusCode': 200,
+            'body': f"Successfully produced and sent {number_of_records} records to SQS."
+        }
     except Exception as e:
         print(f"Error in data_producer_handler: {str(e)}")
+        return {
+            'statusCode': 500,
+            'body': f"Error producing records: {str(e)}"
+        }
 
 
 # if __name__ == "__main__":
